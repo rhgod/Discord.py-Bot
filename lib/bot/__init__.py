@@ -1,6 +1,7 @@
+from datetime import datetime
 from discord import Intents
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from discord import embeds
+from discord import Embed
 from discord.ext.commands import Bot as BotBase
 
 PREFIX = "+"
@@ -37,13 +38,28 @@ class Bot(BotBase):
     async def on_ready(self):
         if not self.ready:
             self.ready = True
-            self.guild = self.get_guild(173161193383395329)
+            self.guild = self.get_guild(838757067527421952) #sever id
             print("bot ready")
             
-            channel = self.get_channel(173161193383395329)
+            channel = self.get_channel(838764006042894366) #botun yazacağı channel id
             await channel.send("Now online!")
 
-            embed = Embed(title="Now online!", description="YBKBOT is now online!")
+            embed = Embed(title="Now online!", description="YBKBOT is now online!",
+                          colour=0x323373, timestamp=datetime.utcnow())
+
+            fields = [("Name", "Value", True),
+                      ("Another field", "This field is next to the other one", True),
+                      ("A non-inline field", "this field ll appear on it's own", False)]
+            
+            for name, value, inline in fields:
+                embed.add_field(name=name, value=value, inline=inline)
+            embed.set_author(name="FBU Yazılım ve Bilişim Kulübü", icon_url=self.guild.icon_url)
+            embed.set_footer(text="This is a footer!")
+            embed.set_thumbnail(url=self.guild.icon_url)
+            embed.set_image(url=self.guild.icon_url)
+            await channel.send(embed=embed)
+            
+            # await channel.send(file=File("{path}"))
 
         else:
             print("Bot reconnected")
