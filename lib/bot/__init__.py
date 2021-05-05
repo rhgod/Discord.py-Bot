@@ -1,4 +1,6 @@
+from asyncio import sleep
 from datetime import datetime
+from glob import glob
 from discord import Intents
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -9,11 +11,26 @@ from ..db import db
 
 PREFIX = "+"
 OWNER_IDS = [137285426015764481]
+COGS = [path.split("\\")[-1][:-3] for path in glob("./lib/cogs/*.py")]
+
+
+class Ready(object):
+    def __init__(self):
+        for cog in COGS:
+            setattr(self, cog, False)
+    
+    def ready_up(self, cog):
+        setattr(self, cog, True)
+        print(f"{cog} cog ready")
+
+    def all_ready(self):
+        return all([getattr(self, cog) for cog in COGS])
 
 class Bot(BotBase):
     def __init__(self):
         self.PREFIX = PREFIX
         self.ready = False
+        self.cogs_ready = Ready()
         self.guild = None
         self.scheduler = AsyncIOScheduler()
 
@@ -24,9 +41,19 @@ class Bot(BotBase):
             owner_ids=OWNER_IDS,
             intents = Intents.all()
         )
-        
+
+    def setup(self):
+        for cog in COGS:
+            self.load_extension(f"lib.cogs.{cog}")
+            print(f"{cog} cog loaded.")
+
+        print("setup complete")
+
     def run(self, version):
         self.VERSION = version
+
+        print("running setup...")
+        self.setup()
 
         with open("./lib/bot/token.0", "r", encoding="utf-8") as tf:
             self.TOKEN = tf.read()
@@ -35,8 +62,7 @@ class Bot(BotBase):
             super().run(self.TOKEN, reconnect=True)
 
     async def print_message(self): #Mesaj gonderen basit bit fonksiyon
-        channel = self.get_channel(838764006042894366)
-        await channel.send("I am a timed notification!")
+        await self.stdout.send("I am a timed notification!")
 
     async def on_connect(self):
         print("bot connected")
@@ -48,6 +74,7 @@ class Bot(BotBase):
         if err == "on_command_error":
             await arsg[0].send("Something went wrong.")
         
+        await self.stdout.send("An error occured.")
         raise
 
     async def on_command_error(self, ctx, exc):
@@ -62,14 +89,12 @@ class Bot(BotBase):
 
     async def on_ready(self):
         if not self.ready:
-            self.ready = True
             self.guild = self.get_guild(838757067527421952) #sever id
+            self.stdout = self.get_channel(838764006042894366)
             # self.scheduler.add_job(self.print_message, CronTrigger(second="0,15,30,45")) #her 15 saniyede mesaj gönderiyor.
             self.scheduler.start()
-            
-            
-            channel = self.get_channel(838764006042894366) #botun yazacağı channel id
-            await channel.send("Now online!")
+        
+           
             
             """ # Bu kisimi su anlik artık on_ready de kullanmamiza gerek yok sonra baska bir yere alirim 
             embed = Embed(title="Now online!", description="YBKBOT is now online!",
@@ -88,6 +113,12 @@ class Bot(BotBase):
             await channel.send(embed=embed)  """
             # await channel.send(file=File("{path}"))
             
+            
+            while not self.cogs_ready.all_ready():
+                await sleep(0.5)
+
+            await self.stdout.send("Now online!")
+            self.ready = True
             print("bot ready")
             
         else:
