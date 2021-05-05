@@ -1,9 +1,11 @@
 from datetime import datetime
 from discord import Intents
+from apscheduler.triggers.cron import CronTrigger
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from discord import Embed
 from discord.ext.commands import Bot as BotBase
 from discord.ext.commands import CommandNotFound
+from ..db import db
 
 PREFIX = "+"
 OWNER_IDS = [137285426015764481]
@@ -14,6 +16,8 @@ class Bot(BotBase):
         self.ready = False
         self.guild = None
         self.scheduler = AsyncIOScheduler()
+
+        db.autosave(self.scheduler)
 
         super().__init__(
             command_prefix=PREFIX, 
@@ -29,6 +33,10 @@ class Bot(BotBase):
 
             print("running bot...")
             super().run(self.TOKEN, reconnect=True)
+
+    async def print_message(self): #Mesaj gonderen basit bit fonksiyon
+        channel = self.get_channel(838764006042894366)
+        await channel.send("I am a timed notification!")
 
     async def on_connect(self):
         print("bot connected")
@@ -56,11 +64,14 @@ class Bot(BotBase):
         if not self.ready:
             self.ready = True
             self.guild = self.get_guild(838757067527421952) #sever id
-            print("bot ready")
+            # self.scheduler.add_job(self.print_message, CronTrigger(second="0,15,30,45")) #her 15 saniyede mesaj gönderiyor.
+            self.scheduler.start()
+            
             
             channel = self.get_channel(838764006042894366) #botun yazacağı channel id
             await channel.send("Now online!")
-
+            
+            """ # Bu kisimi su anlik artık on_ready de kullanmamiza gerek yok sonra baska bir yere alirim 
             embed = Embed(title="Now online!", description="YBKBOT is now online!",
                           colour=0x323373, timestamp=datetime.utcnow())
 
@@ -74,10 +85,11 @@ class Bot(BotBase):
             embed.set_footer(text="This is a footer!")
             embed.set_thumbnail(url=self.guild.icon_url)
             embed.set_image(url=self.guild.icon_url)
-            await channel.send(embed=embed)
-            
+            await channel.send(embed=embed)  """
             # await channel.send(file=File("{path}"))
-
+            
+            print("bot ready")
+            
         else:
             print("Bot reconnected")
 
